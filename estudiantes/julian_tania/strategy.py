@@ -445,7 +445,7 @@ class HexMasterStrategy(Strategy):
         self._player  = config.player
         self._opp     = config.opponent
         self._variant = config.variant  # "classic" o "dark"
-        self._budget  = config.time_limit * 0.92  # Usar 92% del tiempo para ser seguro
+        self._budget  = config.time_limit * 0.93  # Usar 93% del tiempo para ser seguro
         self._moves   = 0
         self._known_opp: set = set()  # Movimientos fallidos del oponente (dark mode)
 
