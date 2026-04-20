@@ -6,7 +6,7 @@ Guia paso a paso para configurar tu equipo y desarrollar una estrategia competit
 
 ```bash
 # Forkea el repo y clona tu fork
-git clone https://github.com/<tu-usuario>/ia_p26_hex_tournament.git
+git clone https://github.com/MCCH-7945/ia_p26_hex_tournament.git
 cd ia_p26_hex_tournament
 
 # Instala dependencias locales

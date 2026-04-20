@@ -19,7 +19,7 @@ Tu equipo implementa **una sola estrategia** que juega Hex en un tablero de **11
 
 ```bash
 # 1. Forkea el repo y clona tu fork
-git clone https://github.com/<tu-usuario>/ia_p26_hex_tournament.git
+git clone https://github.com/MCCH-7945/ia_p26_hex_tournament.git
 cd ia_p26_hex_tournament
 
 # 2. Instala Docker (necesario para correr los tiers MCTS)
