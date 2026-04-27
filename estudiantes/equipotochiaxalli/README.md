@@ -60,6 +60,34 @@ Esta es una determinización simple pero efectiva: ISMCTS o muestreo de mundos m
 
 ## Resultados de pruebas locales
 
+Torneo simulado con `docker compose up team-tournament` (formato oficial: liga round-robin, classic + dark, 4 partidas por par y variante).
+
+### Liga Classic
+| Rank | Estrategia | Pts |
+|---|---|---|
+| **1** | **EquipoTochiaXalli** | **13** |
+| 2 | MCTS_Tier_2 | 4 |
+| 3 | MCTS_Tier_4 | 4 |
+| 4 | MCTS_Tier_3 | 3 |
+| 5 | MCTS_Tier_1 | 0 |
+| 6 | MCTS_Tier_5 | 0 |
+| 7 | Random | 0 |
+
+### Liga Dark
+| Rank | Estrategia | Pts |
+|---|---|---|
+| **1** | **EquipoTochiaXalli** | **7** |
+| 2 | MCTS_Tier_2 | 4 |
+| 3 | MCTS_Tier_3 | 4 |
+| 4 | MCTS_Tier_4 | 4 |
+| 5 | MCTS_Tier_5 | 4 |
+| 6 | MCTS_Tier_1 | 1 |
+| 7 | Random | 0 |
+
+### Standings combinados
+- **EquipoTochiaXalli: 20 puntos totales (#1 en ambas ligas)**
+- Modelos vencidos: **Random, MCTS_Tier_1, MCTS_Tier_2, MCTS_Tier_3, MCTS_Tier_4, MCTS_Tier_5** (los 6).
+
 
 
 ## Estructura de archivos
