@@ -424,23 +424,27 @@ def _weighted_sample_no_replace(items, weights, k: int):
 
 
 def _reply_move(arr, empties, player: int, size: int, checker: _WinChecker) -> int:
-    # Cambio 3: sin _candidate_scores (2xBFS+2xDSU) en cada iteracion del loop MCTS.
-    # Chequeo tactico barato sobre muestra pequeña.
-    sample = empties if len(empties) <= 12 else random.sample(empties, 12)
-    win_idx = _find_immediate(arr, sample, player, checker)
+    # Tactical immediate move first.
+    cand, _, _ = _candidate_scores(arr, empties, player, size)
+    top = [idx for _, idx in cand[: min(8, len(cand))]]
+    win_idx = _find_immediate(arr, top, player, checker)
     if win_idx >= 0:
         return win_idx
-    # Respuesta por local_score — O(1) por celda, sin Dijkstra ni DSU.
-    best_idx = empties[0]
-    best_s = -1e18
-    cap = min(10, len(empties))
-    candidates = empties if len(empties) <= cap else random.sample(empties, cap)
-    for idx in candidates:
-        s = _local_score(arr, idx, player, size) + random.random() * 0.8
-        if s > best_s:
-            best_s = s
-            best_idx = idx
-    return best_idx
+
+    # Stochastic best-of-top replies for less brittleness.
+    top = cand[: min(6, len(cand))]
+    if not top:
+        return random.choice(empties)
+    if len(top) == 1:
+        return top[0][1]
+    vals = [math.exp((s - top[0][0]) / 10.0) for s, _ in top]
+    r = random.random() * sum(vals)
+    acc = 0.0
+    for (s, idx), w in zip(top, vals):
+        acc += w
+        if acc >= r:
+            return idx
+    return top[-1][1]
 
 
 def _rollout_pick(arr, cells, m: int, mover: int, size: int) -> int:
@@ -639,7 +643,7 @@ def _root_mc_search(board, size: int, player: int, opponent: int, variant: str, 
     if opp_win >= 0:
         root_list = [opp_win] + [idx for idx in root_list if idx != opp_win]
 
-    if len(empt) <= 11:  # Cambio 2: ampliado de 8 a 11
+    if len(empt) <= 8:
         end_idx = _solve_endgame(observed, empt, player, size, checker)
         if end_idx >= 0:
             return (end_idx // size, end_idx % size)
@@ -659,8 +663,7 @@ def _root_mc_search(board, size: int, player: int, opponent: int, variant: str, 
         counts = [hidden_count]
         if hidden_count > 0:
             counts = sorted(set([max(0, hidden_count - 1), hidden_count, hidden_count + 1]))
-        # Cambio 1: más mundos iniciales para mejor cobertura vs Tier_5
-        world_budget = 8 if budget > 4.0 else 6 if budget > 2.0 else 4
+        world_budget = 5 if budget > 4.0 else 4 if budget > 2.0 else 3
         for c in counts:
             for _ in range(world_budget):
                 worlds.append(_determinize(board, size, player, opponent, hidden_prob, c))
@@ -682,10 +685,6 @@ def _root_mc_search(board, size: int, player: int, opponent: int, variant: str, 
         root_idx = best
         st = stats[root_idx]
 
-        # Cambio 1b: rotar un mundo cada 40 iteraciones para evitar mundos estáticos
-        if worlds is not None and total % 40 == 0:
-            c = random.choice(counts)
-            worlds[total % len(worlds)] = _determinize(board, size, player, opponent, hidden_prob, c)
         base = random.choice(worlds)[:] if worlds is not None else observed[:]
         if base[root_idx] != 0:
             # Determinization may place hidden stone here. Collision risk matters in dark.
@@ -799,9 +798,7 @@ class HexForgeStrategy(Strategy):
         else:
             opp_turns_nominal = self._my_attempts + 1
         target_total = max(0, opp_turns_nominal)
-        raw_hidden = max(0, target_total - visible_opp)
-        # Cambio 4: amortiguación — en dark no todas las jugadas del oponente son exitosas
-        hidden = round(raw_hidden * 0.80)
+        hidden = max(0, target_total - visible_opp)
         empties = sum(1 for r in range(self._size) for c in range(self._size) if board[r][c] == 0)
         return min(hidden, empties)
 
