@@ -26,7 +26,7 @@ from hex_game import (
 UCT_C = 1.2                # constante de exploracion (algo menor a sqrt(2) =~1.41
                            # para favorecer un poco la explotacion en Hex 11x11)
 TIME_FRACTION = 0.85       # usamos 85% del time budget por jugada
-ROLLOUT_GREEDY_PROB = 0.85 # prob. de elegir movimiento heuristico en rollout
+ROLLOUT_GREEDY_PROB = 0.0 # Cambiar de 0.85 a 0.0
 MAX_ROLLOUT_STEPS = 200    # corte duro por seguridad
 SIM_BATCH = 16             # cada cuantas iteraciones revisamos el reloj
 
@@ -353,7 +353,10 @@ class HexMCTSStrategy(Strategy):
             # usamos un truco: invertimos en la seleccion via signo segun to_move.
             # Aqui acumulamos directamente reward desde perspectiva root y lo signamos al usar.
             # Mejor: guardamos siempre desde perspectiva root.
-            n.Q += reward
+            if n.to_move == self._player:
+                n.Q -= reward 
+            else:
+                n.Q += reward
 
 
 def get_strategy() -> Strategy:
