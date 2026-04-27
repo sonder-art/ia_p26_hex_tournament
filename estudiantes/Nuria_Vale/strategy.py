@@ -72,10 +72,10 @@ class MyStrategy(Strategy):
         """
         pass  # Track collisions here for dark mode
     def play(self, board, last_move):
-        import time, random, math
+        import time, random, math, multiprocessing as mp
 
         start = time.time()
-        TIME_LIMIT = 0.8  # tiempo total por jugada
+        TIME_LIMIT = 0.8  # segundos por jugada
 
         size = self._size
         player = self._player
@@ -84,6 +84,7 @@ class MyStrategy(Strategy):
     # ---------------------------
     # HELPERS
     # ---------------------------
+
         def copy_board(b):
             return [list(row) for row in b]
 
@@ -182,7 +183,7 @@ class MyStrategy(Strategy):
         def rollout(b, current):
             b = [row[:] for row in b]
 
-            for _ in range(25):  # más profundo
+            for _ in range(15):
                 empties = empty_cells(b, size)
                 if not empties:
                     break
@@ -194,21 +195,9 @@ class MyStrategy(Strategy):
             return 0.7 * soft_eval(b) + 0.3 * random.random()
 
     # ---------------------------
-    # 7. SELECCIÓN DE CANDIDATOS
-    # ---------------------------
-        MAX_CANDIDATES = min(20, len(moves))
-        candidate_moves = moves[:MAX_CANDIDATES]
-
-    # 🔥 TIEMPO POR MOVIMIENTO (FIX CLAVE)
-        time_per_move = TIME_LIMIT / max(1, len(candidate_moves))
-        MIN_SIMS = 15
-
-    # ---------------------------
-    # 8. EVALUAR MOVIMIENTO
+    # 7. EVALUAR MOVIMIENTO
     # ---------------------------
         def evaluate_move(move):
-            local_start = time.time()
-
             r, c = move
             base = copy_board(board)
             base[r][c] = player
@@ -216,20 +205,31 @@ class MyStrategy(Strategy):
             total = 0
             sims = 0
 
-            while (time.time() - local_start < time_per_move) or sims < MIN_SIMS:
+            while time.time() - start < TIME_LIMIT:
                 total += rollout(base, opponent)
                 sims += 1
 
-            return (move, total / sims)
+            return (move, total / max(1, sims))
 
     # ---------------------------
-    # 9. EVALUAR TODOS
+    # 8. SELECCIÓN DE CANDIDATOS
     # ---------------------------
-        results = [evaluate_move(m) for m in candidate_moves]
+        MAX_CANDIDATES = min(20, len(moves))
+        candidate_moves = moves[:MAX_CANDIDATES]
+
+    # ---------------------------
+    # 9. PARALELISMO
+    # ---------------------------
+        try:
+            ctx = mp.get_context("fork")
+            with ctx.Pool(4) as pool:
+                results = pool.map(evaluate_move, candidate_moves)
+        except:
+            results = [evaluate_move(m) for m in candidate_moves]
 
     # ---------------------------
     # 10. ELEGIR MEJOR
     # ---------------------------
         best_move = max(results, key=lambda x: x[1])[0]
 
-        return best_move        return best_move
+        return best_move
