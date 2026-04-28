@@ -1,4 +1,4 @@
-   """Unified Hex strategy for team MALIK_RUBEN.
+"""Unified Hex strategy for team MALIK_RUBEN.
 
 Classic:
 - deterministic engine with alpha-beta, TT, iterative deepening
@@ -13,12 +13,26 @@ Dark:
 from __future__ import annotations
 
 import heapq
+import importlib.util
 import random
+import sys
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Optional
 
-from strategy import GameConfig, Strategy as BaseStrategy
+try:
+    from strategy import GameConfig, Strategy as BaseStrategy
+except ImportError:
+    framework_path = Path(__file__).resolve().parents[2] / "strategy.py"
+    spec = importlib.util.spec_from_file_location("hex_framework_strategy", framework_path)
+    if spec is None or spec.loader is None:
+        raise
+    framework = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = framework
+    spec.loader.exec_module(framework)
+    GameConfig = framework.GameConfig
+    BaseStrategy = framework.Strategy
 
 SIZE = 11
 EMPTY = 0
@@ -586,9 +600,9 @@ def _minimax(
 
     winner = board.check_winner()
     if winner == root_player:
-        return 1_000_000.0
+        return 1_000_000.0 + depth
     if winner is not None:
-        return -1_000_000.0
+        return -1_000_000.0 - depth
 
     nc = build_cache(board)
     moves = candidate_moves(board, nc, board.current)
@@ -627,12 +641,14 @@ def _classic_best_move(
     time_limit: float = 13.0,
     max_depth: int = 6,
     max_cands: int = 20,
+    tt: Optional[TranspositionTable] = None,
 ) -> Optional[tuple[int, int]]:
     book = opening_book_move(board, player)
     if book is not None:
         return book
 
-    tt = TranspositionTable()
+    if tt is None:
+        tt = TranspositionTable()
     nc0 = build_cache(board)
     moves = candidate_moves(board, nc0, player, max_cands)
     if not moves:
@@ -818,7 +834,7 @@ def _dark_best_move(
                 break
             move = (r, c)
             if det[r][c] != EMPTY:
-                scores[move] += -800.0
+                scores[move] += -3000.0
                 counts[move] += 1
                 continue
             det[r][c] = player
@@ -843,6 +859,7 @@ class MalikRubenStrategy(BaseStrategy):
         self._variant = config.variant
         self._time_limit = config.time_limit * 0.88
         self._belief: Optional[BeliefState] = None
+        self._tt = TranspositionTable()
         if self._variant == "dark":
             self._belief = BeliefState(self._player, first_mover=self._player == BLACK)
 
@@ -854,7 +871,14 @@ class MalikRubenStrategy(BaseStrategy):
         grid = _to_grid(board)
         if self._variant == "classic":
             hb = HexBoard(grid, self._player, last_move)
-            move = _classic_best_move(hb, self._player, self._time_limit, max_depth=6, max_cands=20)
+            move = _classic_best_move(
+                hb,
+                self._player,
+                self._time_limit,
+                max_depth=6,
+                max_cands=20,
+                tt=self._tt,
+            )
         else:
             assert self._belief is not None
             self._belief.update(grid)
